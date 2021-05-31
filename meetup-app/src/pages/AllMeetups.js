@@ -8,7 +8,6 @@ function AllMeetupsPage() {
     fetch("https://udemy-meetup-app-default-rtdb.firebaseio.com/meetups.json")
       .then((response) => response.json())
       .then((data) => {
-        console.log(data);
         let meetups = [];
         for (const key in data) {
           meetups.push({
@@ -28,10 +27,10 @@ function AllMeetupsPage() {
     );
   }
   return (
-    <div>
+    <section>
       <h1>All Meetups</h1>
       <MeetupList meetups={meetupList} />
-    </div>
+    </section>
   );
 }
 
