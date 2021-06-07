@@ -1,55 +1,80 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 import MoviesList from "./components/MoviesList";
+import AddMovie from "./components/AddMovie";
 import "./App.css";
 
 function App() {
   const [movies, setMovies] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchMoviesHandler = React.useCallback(() => {
+  const fetchMoviesHandler = useCallback(async () => {
     setIsLoading(true);
-    fetch("https://swapi.dev/api/films/")
-      .then((response) => {
-        if (!response.ok) {
-          setIsLoading(false);
-          throw Error("Something went wrong!");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        const transformedMovies = data.results.map((movie) => {
-          return {
-            id: movie.episode_id,
-            title: movie.title,
-            openingText: movie.opening_crawl,
-            releaseDate: movie.release_date,
-          };
+    setError(null);
+    try {
+      const response = await fetch(
+        "https://udemy-http-1c237-default-rtdb.firebaseio.com/movies.json"
+      );
+      if (!response.ok) {
+        throw new Error("Something went wrong!");
+      }
+
+      const data = await response.json();
+
+      let movieList = [];
+      for (let key in data) {
+        movieList.push({
+          id: key,
+          title: data[key].title,
+          openingText: data[key].openingText,
+          releaseDate: data[key].releaseDate,
         });
-        setMovies(transformedMovies);
-        setIsLoading(false);
-      })
-      .catch((error) => setError(error.message));
+      }
+      setMovies(movieList);
+    } catch (error) {
+      setError(error.message);
+    }
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
     fetchMoviesHandler();
   }, [fetchMoviesHandler]);
 
-  let content;
-
-  content =
-    movies.length > 0 ? (
-      <MoviesList movies={movies} />
-    ) : (
-      <p>No movies found.</p>
+  async function addMovieHandler(movie) {
+    await fetch(
+      "https://udemy-http-1c237-default-rtdb.firebaseio.com/movies.json",
+      {
+        method: "POST",
+        body: JSON.stringify(movie),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
     );
-  if (error) content = <p>{error}</p>;
-  if (isLoading) content = <p>Loading...</p>;
+    fetchMoviesHandler();
+  }
+
+  let content = <p>Found no movies.</p>;
+
+  if (movies.length > 0) {
+    content = <MoviesList movies={movies} />;
+  }
+
+  if (error) {
+    content = <p>{error}</p>;
+  }
+
+  if (isLoading) {
+    content = <p>Loading...</p>;
+  }
 
   return (
     <React.Fragment>
+      <section>
+        <AddMovie onAddMovie={addMovieHandler} />
+      </section>
       <section>
         <button onClick={fetchMoviesHandler}>Fetch Movies</button>
       </section>
