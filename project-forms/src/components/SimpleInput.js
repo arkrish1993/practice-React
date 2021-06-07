@@ -28,11 +28,14 @@ const SimpleInput = (props) => {
   const formSubmissionHandler = (event) => {
     event.preventDefault();
 
-    if (!enteredNameIsValid) {
+    if (!formIsValid) {
       return;
     }
 
-    console.log(enteredName);
+    console.log({
+      enteredName,
+      enteredEmail,
+    });
 
     resetNameInput();
     resetEmailInput();
