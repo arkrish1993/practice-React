@@ -1,17 +1,47 @@
-import React, { useState } from "react";
+import React, { useReducer } from "react";
 
 import IngredientForm from "./IngredientForm";
 import IngredientList from "./IngredientList";
 import ErrorModal from "../UI/ErrorModal";
 import Search from "./Search";
 
+const ingredientReducer = (state, action) => {
+  switch (action.type) {
+    case "SET":
+      return action.ingredients;
+    case "ADD":
+      return [...state, action.ingredient];
+    case "DELETE":
+      return state.filter((ing) => ing.id !== action.id);
+    default:
+      throw Error("Something went wrong!");
+  }
+};
+
+const httpReducer = (state, action) => {
+  switch (action.type) {
+    case "SEND":
+      return { loading: true, error: null };
+    case "RESPONSE":
+      return { ...state, loading: false };
+    case "ERROR":
+      return { loading: false, error: action.error };
+    case "RESET":
+      return { loading: false, error: null };
+    default:
+      throw Error("Something went wrong!");
+  }
+};
+
 function Ingredients() {
-  const [ingredients, setIngredients] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [ingredients, dispatchIngredients] = useReducer(ingredientReducer, []);
+  const [httpState, dispatchHttp] = useReducer(httpReducer, {
+    loading: false,
+    error: null,
+  });
 
   const addIngredientsHandler = (ingredient) => {
-    setIsLoading(true);
+    dispatchHttp({ type: "SEND" });
     fetch(
       "https://udemy-http-1c237-default-rtdb.firebaseio.com/ingredients.json",
       {
@@ -24,20 +54,20 @@ function Ingredients() {
     )
       .then((response) => response.json())
       .then((id) => {
-        setIngredients((prevState) => [
-          ...prevState,
-          {
+        dispatchIngredients({
+          type: "ADD",
+          ingredient: {
             id: id,
             ...ingredient,
           },
-        ]);
-        setIsLoading(false);
+        });
+        dispatchHttp({ type: "RESPONSE" });
       })
-      .catch((error) => setError(error.message));
+      .catch((error) => dispatchHttp({ type: "ERROR", error: error.message }));
   };
 
   const removeIngredientHandler = (id) => {
-    setIsLoading(true);
+    dispatchHttp({ type: "SEND" });
     fetch(
       `https://udemy-http-1c237-default-rtdb.firebaseio.com/ingredients/${id}.json`,
       {
@@ -45,31 +75,31 @@ function Ingredients() {
       }
     )
       .then((response) => {
-        setIngredients((prevState) =>
-          prevState.filter((ingredient) => ingredient.id !== id)
-        );
-        setIsLoading(false);
+        dispatchIngredients({ type: "DELETE", id: id });
+        dispatchHttp({ type: "RESPONSE" });
       })
-      .catch((error) => setError(error.message));
+      .catch((error) => dispatchHttp({ type: "ERROR", error: error.message }));
   };
 
   const filterHandler = React.useCallback((filteredIngredients) => {
-    setIngredients(filteredIngredients);
+    dispatchIngredients({ type: "SET", ingredients: filteredIngredients });
   }, []);
 
   return (
     <div className="App">
-      {error && (
+      {httpState.error && (
         <ErrorModal
           onClose={() => {
-            setError(null);
-            setIsLoading(false);
+            dispatchHttp({ type: "RESET" });
           }}
         >
-          {error}
+          {httpState.error}
         </ErrorModal>
       )}
-      <IngredientForm onAdd={addIngredientsHandler} loading={isLoading} />
+      <IngredientForm
+        onAdd={addIngredientsHandler}
+        loading={httpState.loading}
+      />
 
       <section>
         <Search onFilter={filterHandler} />
