@@ -40,7 +40,7 @@ function Ingredients() {
     error: null,
   });
 
-  const addIngredientsHandler = (ingredient) => {
+  const addIngredientsHandler = React.useCallback((ingredient) => {
     dispatchHttp({ type: "SEND" });
     fetch(
       "https://udemy-http-1c237-default-rtdb.firebaseio.com/ingredients.json",
@@ -64,9 +64,9 @@ function Ingredients() {
         dispatchHttp({ type: "RESPONSE" });
       })
       .catch((error) => dispatchHttp({ type: "ERROR", error: error.message }));
-  };
+  }, []);
 
-  const removeIngredientHandler = (id) => {
+  const removeIngredientHandler = React.useCallback((id) => {
     dispatchHttp({ type: "SEND" });
     fetch(
       `https://udemy-http-1c237-default-rtdb.firebaseio.com/ingredients/${id}.json`,
@@ -79,11 +79,20 @@ function Ingredients() {
         dispatchHttp({ type: "RESPONSE" });
       })
       .catch((error) => dispatchHttp({ type: "ERROR", error: error.message }));
-  };
+  }, []);
 
   const filterHandler = React.useCallback((filteredIngredients) => {
     dispatchIngredients({ type: "SET", ingredients: filteredIngredients });
   }, []);
+
+  const ingredientListContent = React.useMemo(() => {
+    return (
+      <IngredientList
+        ingredients={ingredients}
+        onRemoveItem={removeIngredientHandler}
+      />
+    );
+  }, [ingredients, removeIngredientHandler]);
 
   return (
     <div className="App">
@@ -103,10 +112,7 @@ function Ingredients() {
 
       <section>
         <Search onFilter={filterHandler} />
-        <IngredientList
-          ingredients={ingredients}
-          onRemoveItem={removeIngredientHandler}
-        />
+        {ingredientListContent}
       </section>
     </div>
   );
