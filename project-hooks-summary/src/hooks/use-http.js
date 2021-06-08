@@ -1,5 +1,13 @@
 import React, { useReducer } from "react";
 
+const defaultState = {
+  loading: false,
+  error: null,
+  data: null,
+  actionType: null,
+  extArgs: null,
+};
+
 const httpReducer = (state, action) => {
   switch (action.type) {
     case "SEND":
@@ -21,20 +29,14 @@ const httpReducer = (state, action) => {
     case "ERROR":
       return { loading: false, error: action.error };
     case "RESET":
-      return { loading: false, error: null };
+      return defaultState;
     default:
       throw Error("Something went wrong!");
   }
 };
 
 const useHttp = (props) => {
-  const [httpState, dispatchHttp] = useReducer(httpReducer, {
-    loading: false,
-    error: null,
-    data: null,
-    actionType: null,
-    extArgs: null,
-  });
+  const [httpState, dispatchHttp] = useReducer(httpReducer, defaultState);
 
   const sendRequest = React.useCallback((url, params, actionType, extArgs) => {
     dispatchHttp({ type: "SEND", actionType: actionType, extArgs: extArgs });
