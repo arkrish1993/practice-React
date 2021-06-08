@@ -1,9 +1,10 @@
-import React, { useReducer } from "react";
+import React, { useEffect, useReducer } from "react";
 
 import IngredientForm from "./IngredientForm";
 import IngredientList from "./IngredientList";
 import ErrorModal from "../UI/ErrorModal";
 import Search from "./Search";
+import useHttp from "../../hooks/use-http";
 
 const ingredientReducer = (state, action) => {
   switch (action.type) {
@@ -18,68 +19,59 @@ const ingredientReducer = (state, action) => {
   }
 };
 
-const httpReducer = (state, action) => {
-  switch (action.type) {
-    case "SEND":
-      return { loading: true, error: null };
-    case "RESPONSE":
-      return { ...state, loading: false };
-    case "ERROR":
-      return { loading: false, error: action.error };
-    case "RESET":
-      return { loading: false, error: null };
-    default:
-      throw Error("Something went wrong!");
-  }
-};
-
 function Ingredients() {
   const [ingredients, dispatchIngredients] = useReducer(ingredientReducer, []);
-  const [httpState, dispatchHttp] = useReducer(httpReducer, {
-    loading: false,
-    error: null,
-  });
 
-  const addIngredientsHandler = React.useCallback((ingredient) => {
-    dispatchHttp({ type: "SEND" });
-    fetch(
-      "https://udemy-http-1c237-default-rtdb.firebaseio.com/ingredients.json",
-      {
-        method: "POST",
-        body: JSON.stringify(ingredient),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    )
-      .then((response) => response.json())
-      .then((id) => {
+  const { isLoading, error, data, sendRequest, reset, actionType, extArgs } =
+    useHttp();
+
+  useEffect(() => {
+    if (!isLoading && !error) {
+      if (actionType === "ADD")
         dispatchIngredients({
           type: "ADD",
           ingredient: {
-            id: id,
-            ...ingredient,
+            id: data.name,
+            ...extArgs,
           },
         });
-        dispatchHttp({ type: "RESPONSE" });
-      })
-      .catch((error) => dispatchHttp({ type: "ERROR", error: error.message }));
-  }, []);
 
-  const removeIngredientHandler = React.useCallback((id) => {
-    dispatchHttp({ type: "SEND" });
-    fetch(
-      `https://udemy-http-1c237-default-rtdb.firebaseio.com/ingredients/${id}.json`,
-      {
-        method: "DELETE",
-      }
-    )
-      .then((response) => {
-        dispatchIngredients({ type: "DELETE", id: id });
-        dispatchHttp({ type: "RESPONSE" });
-      })
-      .catch((error) => dispatchHttp({ type: "ERROR", error: error.message }));
-  }, []);
+      if (actionType === "DELETE")
+        dispatchIngredients({ type: "DELETE", id: extArgs });
+    }
+  }, [data, actionType, extArgs, isLoading, error]);
+
+  const addIngredientsHandler = React.useCallback(
+    (ingredient) => {
+      sendRequest(
+        "https://udemy-http-1c237-default-rtdb.firebaseio.com/ingredients.json",
+        {
+          method: "POST",
+          body: JSON.stringify(ingredient),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+        "ADD",
+        ingredient
+      );
+    },
+    [sendRequest]
+  );
+
+  const removeIngredientHandler = React.useCallback(
+    (id) => {
+      sendRequest(
+        `https://udemy-http-1c237-default-rtdb.firebaseio.com/ingredients/${id}.json`,
+        {
+          method: "DELETE",
+        },
+        "DELETE",
+        id
+      );
+    },
+    [sendRequest]
+  );
 
   const filterHandler = React.useCallback((filteredIngredients) => {
     dispatchIngredients({ type: "SET", ingredients: filteredIngredients });
@@ -96,20 +88,8 @@ function Ingredients() {
 
   return (
     <div className="App">
-      {httpState.error && (
-        <ErrorModal
-          onClose={() => {
-            dispatchHttp({ type: "RESET" });
-          }}
-        >
-          {httpState.error}
-        </ErrorModal>
-      )}
-      <IngredientForm
-        onAdd={addIngredientsHandler}
-        loading={httpState.loading}
-      />
-
+      {error && <ErrorModal onClose={reset}>{error}</ErrorModal>}
+      <IngredientForm onAdd={addIngredientsHandler} loading={isLoading} />
       <section>
         <Search onFilter={filterHandler} />
         {ingredientListContent}
