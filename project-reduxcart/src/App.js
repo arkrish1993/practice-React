@@ -4,7 +4,7 @@ import Cart from "./components/Cart/Cart";
 import Layout from "./components/Layout/Layout";
 import Products from "./components/Shop/Products";
 import Notification from "./components/UI/Notification";
-import { uiActions } from "./store/ui";
+import { fetchFromFirebase, sendToFirebase } from "./store/firebase-fetch";
 
 let initialLoad = true;
 
@@ -15,48 +15,15 @@ function App() {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    const saveToFirebase = async () => {
-      dispatch(
-        uiActions.showNotification({
-          status: "PENDING",
-          title: "Sending...",
-          message: "Sending card data...",
-        })
-      );
-      const response = await fetch(
-        "https://udemy-http-1c237-default-rtdb.firebaseio.com/cart.json",
-        {
-          method: "PUT",
-          body: JSON.stringify(cart),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      if (!response.ok) throw Error("Something went wrong");
-      dispatch(
-        uiActions.showNotification({
-          status: "SUCCESS",
-          title: "Success!",
-          message: "Sent successfully!",
-        })
-      );
-    };
+    dispatch(fetchFromFirebase());
+  }, [dispatch]);
 
+  useEffect(() => {
     if (initialLoad) {
       initialLoad = false;
       return;
     }
-
-    saveToFirebase().catch((error) => {
-      dispatch(
-        uiActions.showNotification({
-          status: "ERROR",
-          title: "Failed.",
-          message: error.message,
-        })
-      );
-    });
+    if (cart.changed) dispatch(sendToFirebase(cart));
   }, [cart, dispatch]);
   return (
     <>
