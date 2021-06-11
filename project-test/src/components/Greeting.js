@@ -1,8 +1,18 @@
+import { useState } from "react";
+
 const Greeting = () => {
+  const [changedText, setChangedText] = useState(false);
   return (
     <div>
       <p>Hello world!</p>
-      <p>It's good to see you!</p>
+      {changedText ? <p>Howdy mate!</p> : <p>Yassss queen!</p>}
+      <button
+        onClick={() => {
+          setChangedText(true);
+        }}
+      >
+        Toggle text
+      </button>
     </div>
   );
 };
